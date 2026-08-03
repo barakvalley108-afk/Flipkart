@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 240">
+<defs><filter id="s"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity=".16"/></filter></defs>
+<rect width="300" height="240" rx="30" fill="#eef7ff"/>
+<g filter="url(#s)"><path d="M105 72h90l15 35v79H90v-79z" fill="#fdfefe" stroke="#c9dce8" stroke-width="3"/><path d="M105 72h90l-15 29h-60z" fill="#dceefa"/><path d="M90 107h120" stroke="#c9dce8" stroke-width="3"/><rect x="113" y="120" width="74" height="43" rx="11" fill="#2e84b6"/><text x="150" y="147" text-anchor="middle" font-family="Arial" font-size="17" font-weight="700" fill="white">MILK</text></g>
+<text x="150" y="220" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="700" fill="#24362e">Farm Milk</text>
+</svg>

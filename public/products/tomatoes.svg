@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 240">
+<defs><filter id="s"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity=".16"/></filter></defs>
+<rect width="300" height="240" rx="30" fill="#eff9ed"/>
+<g filter="url(#s)"><ellipse cx="150" cy="168" rx="88" ry="21" fill="#dce5df"/><g fill="#ed5646"><circle cx="112" cy="139" r="42"/><circle cx="159" cy="125" r="45"/><circle cx="198" cy="147" r="37"/></g><g fill="#2e8a50"><path d="m112 98 8 25-20-15 25 2-20 13z"/><path d="m159 78 8 29-22-17 28 2-23 15z"/><path d="m198 112 7 24-19-14 24 2-19 12z"/></g></g>
+<text x="150" y="220" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="700" fill="#24362e">Fresh Tomatoes</text>
+</svg>

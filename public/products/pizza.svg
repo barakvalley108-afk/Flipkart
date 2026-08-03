@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 240">
+<defs><filter id="s"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity=".16"/></filter></defs>
+<rect width="300" height="240" rx="30" fill="#fff2db"/>
+<g filter="url(#s)"><ellipse cx="150" cy="159" rx="94" ry="25" fill="#d9e0dd"/><path d="M83 159 150 69l67 90z" fill="#d49a4a"/><path d="M91 149 150 78l59 71z" fill="#f6cc55"/><circle cx="131" cy="114" r="14" fill="#ed5c4b"/><circle cx="172" cy="127" r="13" fill="#ed5c4b"/><circle cx="155" cy="92" r="11" fill="#ed5c4b"/><g fill="#27894f"><path d="m113 138 16-9-5 18z"/><path d="m181 101 16-9-5 18z"/><path d="m149 139 16-9-5 18z"/></g></g>
+<text x="150" y="220" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="700" fill="#24362e">Margherita Pizza</text>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 240">
+<defs><filter id="s"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity=".16"/></filter></defs>
+<rect width="300" height="240" rx="30" fill="#fff3f0"/>
+<g filter="url(#s)"><ellipse cx="150" cy="166" rx="94" ry="24" fill="#dce4e0"/><ellipse cx="150" cy="151" rx="88" ry="24" fill="#fff"/><g fill="#f7f2e8" stroke="#dccfb8" stroke-width="2"><path d="M78 149c0-23 12-39 29-39s29 16 29 39z"/><path d="M115 145c0-25 14-43 32-43s32 18 32 43z"/><path d="M165 149c0-23 12-39 29-39s29 16 29 39z"/></g><path d="M87 120l18 10 18-10M125 113l22 13 22-13M174 120l18 10 18-10" fill="none" stroke="#d2c19e" stroke-width="3"/></g>
+<text x="150" y="220" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="700" fill="#24362e">Veg Momos</text>
+</svg>

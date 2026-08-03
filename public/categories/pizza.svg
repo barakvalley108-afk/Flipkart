@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 240">
+<defs><filter id="s"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity=".16"/></filter></defs>
+<rect width="300" height="240" rx="30" fill="#fff4dc"/>
+<g filter="url(#s)"><circle cx="150" cy="118" r="58" fill="#fff"/><circle cx="150" cy="118" r="42" fill="#0b4f3c" opacity=".10"/><path d="M118 128c22-45 45-45 64 0" fill="none" stroke="#0b4f3c" stroke-width="10" stroke-linecap="round"/><circle cx="150" cy="103" r="15" fill="#d9f04b"/></g>
+<text x="150" y="220" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="700" fill="#24362e">Pizza</text>
+</svg>

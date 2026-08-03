@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 240">
+<defs><filter id="s"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity=".16"/></filter></defs>
+<rect width="300" height="240" rx="30" fill="#f3f9ec"/>
+<g filter="url(#s)"><ellipse cx="150" cy="174" rx="87" ry="20" fill="#dce5df"/><g fill="#d93f3f"><circle cx="112" cy="141" r="40"/><circle cx="162" cy="128" r="44"/><circle cx="201" cy="150" r="36"/></g><g stroke="#5d3c24" stroke-width="5"><path d="M111 103c4-14 10-20 17-25"/><path d="M160 85c4-14 10-20 17-25"/><path d="M200 116c4-12 9-18 16-22"/></g><g fill="#4e9c58"><ellipse cx="132" cy="82" rx="15" ry="7" transform="rotate(-28 132 82)"/><ellipse cx="181" cy="64" rx="15" ry="7" transform="rotate(-28 181 64)"/><ellipse cx="220" cy="98" rx="14" ry="7" transform="rotate(-28 220 98)"/></g></g>
+<text x="150" y="220" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="700" fill="#24362e">Red Apples</text>
+</svg>

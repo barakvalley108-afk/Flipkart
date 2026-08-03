@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 240">
+<defs><filter id="s"><feDropShadow dx="0" dy="8" stdDeviation="8" flood-opacity=".16"/></filter></defs>
+<rect width="300" height="240" rx="30" fill="#ecf8ef"/>
+<g filter="url(#s)"><ellipse cx="150" cy="162" rx="86" ry="25" fill="#d6dfda"/><path d="M72 119h156l-19 54c-4 13-17 21-31 21h-56c-14 0-27-8-31-21z" fill="#fdfdfb"/><ellipse cx="150" cy="119" rx="78" ry="27" fill="#f4d273"/><circle cx="112" cy="114" r="8" fill="#f56b50"/><circle cx="134" cy="103" r="7" fill="#4da55e"/><circle cx="163" cy="116" r="7" fill="#ff9e44"/><circle cx="190" cy="105" r="7" fill="#4da55e"/><path d="m102 132 15-8m24 14 17-10m18 8 20-12" stroke="#b17c2b" stroke-width="4"/></g>
+<text x="150" y="220" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="700" fill="#24362e">Fried Rice</text>
+</svg>
