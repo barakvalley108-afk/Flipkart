@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     buildCommand: npm install --include=dev && npm run build
-    startCommand: npm run db:deploy && npm run start
+    startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
