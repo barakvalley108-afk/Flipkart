@@ -92,7 +92,7 @@ Open `http://localhost:3000`.
 The Blueprint runs:
 
 - Build: `npm install --include=dev && npm run build`
-- Start: `npm run db:deploy && npm run start`
+- Start: `npm run start`
 - Health check: `/api/health`
 
 ## Recommended production build phases
