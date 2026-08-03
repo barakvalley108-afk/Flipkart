@@ -1,5 +1,9 @@
 # QuickCart Food & Grocery
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/barakvalley108-afk/Flipkart)
+
+> The included Render Blueprint uses Free instances for testing. Free Render Postgres databases expire after 30 days, so upgrade the database before using this for a real business.
+
 A separate, repo-ready professional foundation for a food and grocery delivery platform.
 
 This project does **not** modify or depend on the existing Sabka Delivery repository.
@@ -79,18 +83,16 @@ Open `http://localhost:3000`.
 
 ## Render deployment
 
-1. Create a new **private GitHub repository**.
-2. Upload this project.
-3. In Render, create a Blueprint from the repository.
-4. Review the web service and PostgreSQL plans in `render.yaml`.
-5. Add the four panel email and password-hash environment variables.
-6. Deploy.
+1. Click the **Deploy to Render** button at the top of this README.
+2. Sign in to Render and connect GitHub when requested.
+3. Review the web service and PostgreSQL resources from `render.yaml`.
+4. Add the four panel email and password-hash environment variables.
+5. Deploy the Blueprint.
 
 The Blueprint runs:
 
 - Build: `npm install --include=dev && npm run build`
-- Pre-deploy migrations: `npm run db:deploy`
-- Start: `npm run start`
+- Start: `npm run db:deploy && npm run start`
 - Health check: `/api/health`
 
 ## Recommended production build phases
