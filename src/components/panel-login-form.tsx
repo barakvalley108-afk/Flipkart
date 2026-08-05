@@ -1,8 +1,11 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export function PanelLoginForm() {
+  const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -33,12 +36,12 @@ export function PanelLoginForm() {
       return;
     }
 
-    window.location.href = body.redirectTo;
+    router.push(body.redirectTo);
   }
 
   return (
     <div className="login-form-card">
-      <a className="back-link" href="/">← Back to customer app</a>
+      <Link className="back-link" href="/">← Back to customer app</Link>
       <span className="section-kicker">WELCOME BACK</span>
       <h2>Sign in to your panel</h2>
       <p>Use the email and password assigned by the Super Admin.</p>

@@ -1,4 +1,5 @@
 import { PanelLoginForm } from "@/components/panel-login-form";
+import Link from "next/link";
 
 export const metadata = {
   title: "Partner Login"
@@ -8,13 +9,13 @@ export default function PanelLoginPage() {
   return (
     <main className="login-page">
       <section className="login-brand-panel">
-        <a className="brand light-brand" href="/">
+        <Link className="brand light-brand" href="/">
           <span className="brand-mark">Q</span>
           <span>
             <strong>QuickCart</strong>
             <small>Operations Suite</small>
           </span>
-        </a>
+        </Link>
         <div className="login-copy">
           <span className="eyebrow">PRIVATE OPERATIONS</span>
           <h1>One secure workspace for every delivery partner.</h1>
