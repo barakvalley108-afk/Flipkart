@@ -2,16 +2,24 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { panelSessionCookie, verifySessionToken } from "@/lib/session";
-import type { PanelRole } from "@/lib/types";
+import { db } from "@/lib/db";
+import { sessionCookie, verifySessionToken } from "@/lib/session";
+import type { UserRoleValue } from "@/lib/types";
 
-export async function requireRole(allowedRoles: PanelRole[]) {
+export async function getSession() {
   const cookieStore = await cookies();
-  const token = cookieStore.get(panelSessionCookie.name)?.value;
-  const session = await verifySessionToken(token);
+  return verifySessionToken(cookieStore.get(sessionCookie.name)?.value);
+}
 
-  if (!session) redirect("/panel-login");
-  if (!allowedRoles.includes(session.role)) redirect("/unauthorized");
+export async function requireRole(allowedRoles: UserRoleValue[]) {
+  const session = await getSession();
+  if (!session) redirect(allowedRoles.includes("CUSTOMER") ? "/login" : "/panel-login");
+  if (!allowedRoles.includes(session.role)) redirect("/forbidden");
 
-  return session;
+  const user = await db.user.findUnique({
+    where: { id: session.userId },
+    select: { id: true, name: true, email: true, phone: true, role: true, isActive: true }
+  });
+  if (!user?.isActive || user.role !== session.role) redirect("/unauthorized");
+  return { ...session, user };
 }

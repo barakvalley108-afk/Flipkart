@@ -1,18 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { brand } from "@/config/brand";
+import { PwaRegister } from "@/components/pwa-register";
 
 export const metadata: Metadata = {
   title: {
-    default: "QuickCart — Food & Grocery",
-    template: "%s | QuickCart"
+    default: `${brand.name} — Food & Grocery`,
+    template: `%s | ${brand.name}`
   },
   description:
-    "A modern food and grocery delivery platform with private operational panels.",
+    brand.description,
   manifest: "/manifest.webmanifest"
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b4f3c",
+  themeColor: brand.colors.primaryDark,
   width: "device-width",
   initialScale: 1
 };
@@ -22,7 +24,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>{children}<PwaRegister /></body>
     </html>
   );
 }

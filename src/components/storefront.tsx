@@ -1,502 +1,337 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
-import { categories, products, type CatalogProduct, type StoreMode } from "@/lib/catalog";
+import Link from "next/link";
 import {
-  CartIcon,
-  ChevronDownIcon,
-  ClockIcon,
-  GridIcon,
-  HomeIcon,
-  LocationIcon,
-  MinusIcon,
-  PackageIcon,
-  PlusIcon,
-  SearchIcon,
-  StarIcon,
-  UserIcon
-} from "@/components/icon";
+  ArrowRight,
+  ChevronDown,
+  Clock3,
+  Grid2X2,
+  Home,
+  MapPin,
+  Minus,
+  PackageOpen,
+  Plus,
+  ReceiptText,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  ShoppingBasket,
+  Star,
+  Store,
+  Trash2,
+  UserRound,
+  UtensilsCrossed,
+  X
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { brand } from "@/config/brand";
+import { formatMoney } from "@/lib/money";
 
-type CartState = Record<string, number>;
+type Mode = "food" | "grocery";
+type Variant = { id: string; name: string; unit: string; mrpPaise: number; salePricePaise: number; stock: number; isAvailable: boolean };
+type CatalogProduct = {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  isVeg?: boolean | null;
+  store: { id: string; name: string; isOpen: boolean; rating: number; averagePrepMins: number };
+  category: { id: string; name: string; slug: string };
+  variants: Variant[];
+};
+type CatalogData = {
+  mode: Mode;
+  categories: Array<{ id: string; name: string; slug: string; imageUrl?: string | null }>;
+  stores: Array<{ id: string; name: string; slug: string; description?: string | null; imageUrl?: string | null; isOpen: boolean; rating: number; averagePrepMins: number; minimumOrderPaise: number; deliveryFeePaise: number }>;
+  banners: Array<{ id: string; title: string; subtitle?: string | null; imageUrl: string; linkUrl?: string | null }>;
+  products: CatalogProduct[];
+};
+type CartData = {
+  store: { id: string; name: string; minimumOrderPaise: number } | null;
+  itemCount: number;
+  subtotalPaise: number;
+  items: Array<{
+    id: string;
+    quantity: number;
+    lineTotalPaise: number;
+    product: { name: string; imageUrl?: string | null };
+    variant: { name: string; salePricePaise: number; stock: number };
+  }>;
+};
 
-const STORAGE_KEY = "quickcart-demo-cart";
+const fallbackCategoryImages: Record<Mode, string[]> = {
+  food: ["/categories/biryani.svg", "/categories/momos.svg", "/categories/meals.svg", "/categories/drinks.svg"],
+  grocery: ["/categories/vegetables.svg", "/categories/fruits.svg", "/categories/dairy.svg", "/categories/snacks.svg"]
+};
 
-export function Storefront() {
-  const [mode, setMode] = useState<StoreMode>("grocery");
+function safeImage(url: string | null | undefined, fallback: string) {
+  return url?.startsWith("/") ? url : fallback;
+}
+
+async function jsonRequest<T>(url: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(url, options);
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw Object.assign(new Error(body.message ?? "Something went wrong."), { status: response.status, code: body.code });
+  return body.data as T;
+}
+
+export function Storefront({ initialMode = "grocery" }: { initialMode?: Mode }) {
+  const router = useRouter();
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [search, setSearch] = useState("");
-  const [cart, setCart] = useState<CartState>({});
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [diet, setDiet] = useState<"all" | "veg" | "nonveg">("all");
+  const [catalog, setCatalog] = useState<CatalogData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
+  const [cart, setCart] = useState<CartData | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [pincode, setPincode] = useState("");
+  const [location, setLocation] = useState<string>(brand.defaultLocation);
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setCart(JSON.parse(stored) as CartState);
-      } catch {
-        window.localStorage.removeItem(STORAGE_KEY);
-      }
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 250);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  const loadCatalog = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    const params = new URLSearchParams({ mode });
+    if (debouncedSearch) params.set("q", debouncedSearch);
+    if (category) params.set("category", category);
+    if (diet !== "all") params.set("veg", String(diet === "veg"));
+    try {
+      setCatalog(await jsonRequest<CatalogData>(`/api/catalog?${params}`));
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Catalog could not be loaded.");
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [mode, debouncedSearch, category, diet]);
 
+  useEffect(() => { void loadCatalog(); }, [loadCatalog]);
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
-  }, [cart]);
+    if (!catalog?.banners.length || catalog.banners.length < 2) return;
+    const timer = window.setInterval(() => setBannerIndex((index) => (index + 1) % catalog.banners.length), 5500);
+    return () => window.clearInterval(timer);
+  }, [catalog?.banners.length]);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(""), 3200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
-  const visibleProducts = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return products.filter((product) => {
-      const matchesMode = product.mode === mode;
-      const matchesSearch =
-        !term ||
-        product.name.toLowerCase().includes(term) ||
-        product.store.toLowerCase().includes(term);
-      return matchesMode && matchesSearch;
-    });
-  }, [mode, search]);
+  async function loadCart(open = false) {
+    try {
+      setCart(await jsonRequest<CartData>("/api/cart"));
+      if (open) setCartOpen(true);
+    } catch (requestError) {
+      const status = (requestError as { status?: number }).status;
+      if (status === 401) router.push("/login?next=/");
+      else setToast(requestError instanceof Error ? requestError.message : "Cart unavailable.");
+    }
+  }
 
-  const cartItems = Object.entries(cart)
-    .map(([id, quantity]) => ({
-      product: products.find((item) => item.id === id),
-      quantity
-    }))
-    .filter(
-      (item): item is { product: CatalogProduct; quantity: number } =>
-        Boolean(item.product) && item.quantity > 0
-    );
+  async function addToCart(product: CatalogProduct, buyNow = false) {
+    const variant = product.variants.find((item) => item.isAvailable && item.stock > 0);
+    if (!variant) return setToast("This product is out of stock.");
+    try {
+      const next = await jsonRequest<CartData>("/api/cart", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ variantId: variant.id, quantity: 1, addonIds: [] })
+      });
+      setCart(next);
+      setToast(`${product.name} added to cart.`);
+      if (buyNow) router.push("/checkout");
+    } catch (requestError) {
+      const status = (requestError as { status?: number }).status;
+      if (status === 401) router.push(`/login?next=${encodeURIComponent(buyNow ? "/checkout" : "/")}`);
+      else setToast(requestError instanceof Error ? requestError.message : "Could not add item.");
+    }
+  }
 
-  const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0
-  );
+  async function updateCartItem(itemId: string, quantity: number) {
+    try {
+      setCart(await jsonRequest<CartData>("/api/cart", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ itemId, quantity })
+      }));
+    } catch (requestError) {
+      setToast(requestError instanceof Error ? requestError.message : "Cart could not be updated.");
+    }
+  }
 
-  function changeQuantity(productId: string, change: number) {
-    setCart((current) => {
-      const nextQuantity = Math.max(0, (current[productId] ?? 0) + change);
-      const next = { ...current };
-      if (nextQuantity === 0) delete next[productId];
-      else next[productId] = nextQuantity;
-      return next;
-    });
+  async function clearCart() {
+    try { setCart(await jsonRequest<CartData>("/api/cart", { method: "DELETE" })); }
+    catch (requestError) { setToast(requestError instanceof Error ? requestError.message : "Cart could not be cleared."); }
+  }
+
+  async function checkPincode(event: React.FormEvent) {
+    event.preventDefault();
+    try {
+      const result = await jsonRequest<{ serviceable: boolean; city?: string; state?: string; estimatedDeliveryMin?: number }>(`/api/pincodes/${pincode}`);
+      if (!result.serviceable) return setToast("We do not deliver to this pincode yet.");
+      setLocation(`${result.city ?? "Delivery area"}, ${result.state ?? "India"}`);
+      setToast(`Delivery available in about ${result.estimatedDeliveryMin} minutes.`);
+      setLocationOpen(false);
+    } catch (requestError) {
+      setToast(requestError instanceof Error ? requestError.message : "Pincode check failed.");
+    }
+  }
+
+  const suggestions = useMemo(() => {
+    if (!search.trim() || !catalog) return [];
+    return catalog.products.filter((product) => product.name.toLowerCase().includes(search.toLowerCase())).slice(0, 5);
+  }, [search, catalog]);
+
+  const banner = catalog?.banners[bannerIndex];
+  function changeMode(next: Mode) {
+    setMode(next);
+    setCategory("");
+    setDiet("all");
+    setBannerIndex(0);
   }
 
   return (
-    <div className="storefront-shell">
-      <header className="top-header">
-        <div className="header-inner">
-          <a className="brand" href="#top" aria-label="QuickCart home">
-            <span className="brand-mark">Q</span>
-            <span>
-              <strong>QuickCart</strong>
-              <small>Food & Grocery</small>
-            </span>
-          </a>
-
-          <button className="location-button" type="button">
-            <span className="location-icon-wrap">
-              <LocationIcon />
-            </span>
-            <span>
-              <small>Delivery in 12 minutes</small>
-              <strong>Lala Bazar, Assam</strong>
-            </span>
-            <ChevronDownIcon className="chevron" />
+    <div className="customer-app" id="top">
+      <header className="customer-header">
+        <div className="customer-header-inner">
+          <Link className="brand-lockup" href="/" aria-label={`${brand.name} home`}>
+            <span className="brand-symbol">{brand.logoText}</span>
+            <span><strong>{brand.name}</strong><small>FOOD + GROCERY</small></span>
+          </Link>
+          <button className="location-control" type="button" onClick={() => setLocationOpen(true)}>
+            <MapPin aria-hidden="true" />
+            <span><small>Deliver to</small><strong>{location}</strong></span>
+            <ChevronDown aria-hidden="true" />
           </button>
-
-          <label className="desktop-search">
-            <SearchIcon />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder='Search "biryani", "milk" or "snacks"'
-            />
-          </label>
-
-          <a className="panel-link" href="/panel-login">
-            Partner Login
-          </a>
-
-          <button
-            className="header-cart"
-            type="button"
-            onClick={() => setCartOpen(true)}
-          >
-            <CartIcon />
-            <span>Cart</span>
-            {itemCount > 0 && <b>{itemCount}</b>}
+          <div className="search-wrap desktop-only">
+            <Search aria-hidden="true" />
+            <input ref={searchRef} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search dishes, products or stores" aria-label="Search products" />
+            {search && <button type="button" aria-label="Clear search" onClick={() => setSearch("")}><X /></button>}
+            {suggestions.length > 0 && <div className="search-suggestions">{suggestions.map((item) => <Link href={`/products/${item.id}`} key={item.id}>{item.name}<span>{item.store.name}</span></Link>)}</div>}
+          </div>
+          <nav className="desktop-nav" aria-label="Main navigation">
+            <Link href="/orders">Orders</Link>
+            <Link href="/profile">Profile</Link>
+            <Link className="partner-entry" href="/panel-login">Partner</Link>
+          </nav>
+          <button className="cart-button" type="button" onClick={() => void loadCart(true)} aria-label={`Cart with ${cart?.itemCount ?? 0} items`}>
+            <ShoppingBag /> <span>Cart</span>{Boolean(cart?.itemCount) && <b>{cart?.itemCount}</b>}
           </button>
         </div>
       </header>
 
-      <main id="top">
-        <section className="mobile-location">
-          <button className="location-button" type="button">
-            <span className="location-icon-wrap">
-              <LocationIcon />
-            </span>
-            <span>
-              <small>Delivery in 12 minutes</small>
-              <strong>Lala Bazar, Assam</strong>
-            </span>
-            <ChevronDownIcon className="chevron" />
+      <main className="customer-main">
+        <section className="mobile-search-block">
+          <div className="search-wrap">
+            <Search aria-hidden="true" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search food and groceries" aria-label="Search products" />
+            {search && <button type="button" aria-label="Clear search" onClick={() => setSearch("")}><X /></button>}
+          </div>
+        </section>
+
+        <section className="commerce-switch content-container" aria-label="Choose shopping section">
+          <button className={mode === "grocery" ? "active" : ""} type="button" onClick={() => changeMode("grocery")}>
+            <ShoppingBasket /><span><strong>Grocery</strong><small>Fresh daily essentials</small></span>
           </button>
-          <label className="mobile-search">
-            <SearchIcon />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search food and groceries"
-            />
-          </label>
+          <button className={mode === "food" ? "active" : ""} type="button" onClick={() => changeMode("food")}>
+            <UtensilsCrossed /><span><strong>Food</strong><small>Meals made nearby</small></span>
+          </button>
         </section>
 
-        <section className="hero-section content-width">
-          <div className="hero-copy">
-            <span className="eyebrow">FAST • FRESH • LOCAL</span>
-            <h1>
-              Daily essentials and favourite meals,
-              <span> delivered together.</span>
-            </h1>
-            <p>
-              Discover trusted nearby restaurants and grocery stores in one
-              clean, fast delivery experience.
-            </p>
-            <div className="hero-actions">
-              <button type="button" onClick={() => setMode("grocery")}>
-                Shop groceries
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => setMode("food")}
-              >
-                Order food
-              </button>
-            </div>
-            <div className="trust-strip">
-              <span>✓ Live order updates</span>
-              <span>✓ Secure checkout</span>
-              <span>✓ Local support</span>
-            </div>
+        <section className="premium-hero content-container">
+          <div className="hero-content">
+            <span className="overline">LOCAL STORES. ONE SMOOTH CART.</span>
+            <h1>{mode === "grocery" ? "The good stuff your home needs, right on time." : "Local favourites, warm and ready when you are."}</h1>
+            <p>{brand.description}</p>
+            <button type="button" onClick={() => document.getElementById("products")?.scrollIntoView({ behavior: "smooth" })}>Explore today&apos;s picks <ArrowRight /></button>
+            <div className="hero-proof"><span><ShieldCheck /> Secure checkout</span><span><Clock3 /> Clear delivery updates</span></div>
           </div>
-          <div className="hero-visual" aria-label="Food and grocery illustration">
-            <div className="delivery-ring" />
-            <div className="hero-card hero-card-food">
-              <Image
-                src="/products/chicken-biryani.svg"
-                alt=""
-                width={160}
-                height={160}
-              />
-              <strong>Hot meals</strong>
-              <span>From nearby kitchens</span>
-            </div>
-            <div className="hero-card hero-card-grocery">
-              <Image
-                src="/products/apples.svg"
-                alt=""
-                width={150}
-                height={150}
-              />
-              <strong>Fresh grocery</strong>
-              <span>Picked with care</span>
-            </div>
-            <div className="eta-pill">
-              <ClockIcon />
-              <span>
-                <strong>12 min</strong>
-                average grocery delivery
-              </span>
-            </div>
+          <div className="hero-collage" aria-hidden="true">
+            <span className="collage-card large"><Image src={mode === "grocery" ? "/products/apples.svg" : "/products/chicken-biryani.svg"} alt="" width={420} height={320} priority /></span>
+            <span className="collage-card small"><Image src={mode === "grocery" ? "/products/milk.svg" : "/products/momos.svg"} alt="" width={220} height={180} /></span>
+            <span className="speed-note"><Clock3 /><strong>{mode === "grocery" ? "15–30" : "25–40"} min</strong><small>Typical delivery</small></span>
           </div>
         </section>
 
-        <section className="mode-section content-width">
-          <div className="mode-tabs" role="tablist" aria-label="Shopping mode">
-            <button
-              type="button"
-              className={mode === "grocery" ? "active" : ""}
-              onClick={() => setMode("grocery")}
-            >
-              <span>🛒</span>
-              Grocery
-              <small>Everyday essentials</small>
-            </button>
-            <button
-              type="button"
-              className={mode === "food" ? "active" : ""}
-              onClick={() => setMode("food")}
-            >
-              <span>🍽️</span>
-              Food
-              <small>Restaurants near you</small>
-            </button>
-          </div>
+        {banner && <section className="campaign-banner content-container" aria-roledescription="carousel">
+          <div><span>QUICKCART EDIT</span><h2>{banner.title}</h2><p>{banner.subtitle}</p>{banner.linkUrl && <Link href={banner.linkUrl}>View collection <ArrowRight /></Link>}</div>
+          <Image src={safeImage(banner.imageUrl, mode === "grocery" ? "/products/apples.svg" : "/products/chicken-biryani.svg")} alt="" width={300} height={220} />
+          {catalog && catalog.banners.length > 1 && <div className="carousel-dots">{catalog.banners.map((item, index) => <button type="button" aria-label={`Show banner ${index + 1}`} className={index === bannerIndex ? "active" : ""} onClick={() => setBannerIndex(index)} key={item.id} />)}</div>}
+        </section>}
+
+        <section className="content-container content-section" id="categories">
+          <div className="section-title"><div><span>CURATED FOR QUICK CHOICES</span><h2>Shop by category</h2></div><button type="button" onClick={() => setCategory("")}>View all</button></div>
+          {loading && !catalog ? <div className="category-skeleton-row">{Array.from({ length: 6 }, (_, index) => <i key={index} />)}</div> :
+          <div className="category-row">{catalog?.categories.map((item, index) => <button type="button" className={category === item.slug ? "active" : ""} onClick={() => setCategory(category === item.slug ? "" : item.slug)} key={item.id}>
+            <span><Image src={safeImage(item.imageUrl, fallbackCategoryImages[mode][index % fallbackCategoryImages[mode].length])} alt="" width={120} height={110} /></span><strong>{item.name}</strong>
+          </button>)}</div>}
         </section>
 
-        <section className="content-section content-width">
-          <div className="section-heading">
-            <div>
-              <span className="section-kicker">
-                {mode === "grocery" ? "SHOP BY CATEGORY" : "WHAT ARE YOU CRAVING?"}
-              </span>
-              <h2>
-                {mode === "grocery"
-                  ? "Everything your home needs"
-                  : "Your favourite food, nearby"}
-              </h2>
-            </div>
-            <button type="button">View all</button>
-          </div>
-
-          <div className="category-grid">
-            {categories[mode].map((category) => (
-              <button className="category-card" type="button" key={category.name}>
-                <span className="category-image">
-                  <Image
-                    src={category.image}
-                    alt=""
-                    width={120}
-                    height={120}
-                  />
-                </span>
-                <strong>{category.name}</strong>
-              </button>
-            ))}
-          </div>
+        <section className="content-container content-section store-section">
+          <div className="section-title"><div><span>TRUSTED NEARBY</span><h2>{mode === "food" ? "Restaurants around you" : "Stores packing today"}</h2></div></div>
+          <div className="store-row">{catalog?.stores.map((item) => <article key={item.id}>
+            <Image src={safeImage(item.imageUrl, mode === "food" ? "/products/chicken-biryani.svg" : "/products/apples.svg")} alt="" width={140} height={110} />
+            <div><span className={item.isOpen ? "open" : "closed"}>{item.isOpen ? "Open" : "Closed"}</span><h3>{item.name}</h3><p>{item.description}</p><small><Star /> {item.rating.toFixed(1)} <Clock3 /> {item.averagePrepMins} min</small></div>
+          </article>)}</div>
         </section>
 
-        <section className="offer-banner content-width">
-          <div>
-            <span className="offer-label">WELCOME OFFER</span>
-            <h2>Save 20% on your first order</h2>
-            <p>Use code <strong>WELCOME20</strong> at checkout.</p>
+        <section className="content-container content-section" id="products">
+          <div className="section-title product-section-title"><div><span>{search ? "SEARCH RESULTS" : "POPULAR RIGHT NOW"}</span><h2>{search ? `Matches for “${search}”` : mode === "food" ? "Meals people reorder" : "Useful picks for today"}</h2></div>
+            <div className="filter-pills"><button type="button" className={diet === "all" ? "active" : ""} onClick={() => setDiet("all")}>All</button><button type="button" className={diet === "veg" ? "active" : ""} onClick={() => setDiet("veg")}>Veg</button>{mode === "food" && <button type="button" className={diet === "nonveg" ? "active" : ""} onClick={() => setDiet("nonveg")}>Non-Veg</button>}</div>
           </div>
-          <button type="button">Explore offers</button>
+          {error && <div className="inline-error"><PackageOpen /><div><strong>Catalog is taking longer than expected</strong><p>{error}</p></div><button type="button" onClick={() => void loadCatalog()}>Retry</button></div>}
+          {loading ? <div className="product-grid">{Array.from({ length: 8 }, (_, index) => <div className="product-skeleton" key={index}><i /><b /><span /><button /></div>)}</div> : catalog?.products.length ? <div className="product-grid">{catalog.products.map((product) => {
+            const variant = product.variants[0];
+            const discount = variant && variant.mrpPaise > variant.salePricePaise ? Math.round((variant.mrpPaise - variant.salePricePaise) * 100 / variant.mrpPaise) : 0;
+            const unavailable = !product.store.isOpen || !variant?.isAvailable || variant.stock < 1;
+            return <article className="product-card" key={product.id}>
+              <Link className="product-image" href={`/products/${product.id}`}><Image src={safeImage(product.imageUrl, mode === "food" ? "/products/fried-rice.svg" : "/products/chips.svg")} alt={product.name} width={280} height={230} />{discount > 0 && <span>{discount}% OFF</span>}</Link>
+              <div className="product-card-content"><small className="product-store"><Store /> {product.store.name}</small><Link href={`/products/${product.id}`}><h3>{product.name}</h3></Link><p>{variant?.unit ?? "Unavailable"}</p>
+                <div className="product-price"><span><strong>{variant ? formatMoney(variant.salePricePaise) : "—"}</strong>{discount > 0 && <del>{formatMoney(variant.mrpPaise)}</del>}</span><button type="button" disabled={unavailable} onClick={() => void addToCart(product)}>{unavailable ? "Unavailable" : "ADD"}</button></div>
+                <button className="buy-now" type="button" disabled={unavailable} onClick={() => void addToCart(product, true)}>Buy now</button>
+              </div>
+            </article>;
+          })}</div> : !error && <div className="empty-state"><Search /><h3>No matching products</h3><p>Try a broader search or clear the current filters.</p><button type="button" onClick={() => { setSearch(""); setCategory(""); setDiet("all"); }}>Clear filters</button></div>}
         </section>
 
-        <section className="content-section content-width products-section">
-          <div className="section-heading">
-            <div>
-              <span className="section-kicker">
-                {mode === "grocery" ? "POPULAR NEAR YOU" : "BESTSELLING DISHES"}
-              </span>
-              <h2>
-                {search
-                  ? `Results for “${search}”`
-                  : mode === "grocery"
-                    ? "Fast picks for today"
-                    : "Loved by local customers"}
-              </h2>
-            </div>
-          </div>
-
-          <div className="product-grid">
-            {visibleProducts.map((product) => (
-              <article className="product-card" key={product.id}>
-                <div className="product-image">
-                  {product.badge && <span className="product-badge">{product.badge}</span>}
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    width={260}
-                    height={210}
-                  />
-                </div>
-                <div className="product-content">
-                  <div className="product-meta">
-                    <span className="rating">
-                      <StarIcon />
-                      {product.rating}
-                    </span>
-                    <span>{product.eta}</span>
-                  </div>
-                  <h3>{product.name}</h3>
-                  <p>{product.store}</p>
-                  <div className="unit-row">{product.unit}</div>
-                  <div className="price-row">
-                    <span>
-                      <strong>₹{product.price}</strong>
-                      {product.mrp && <del>₹{product.mrp}</del>}
-                    </span>
-                    {(cart[product.id] ?? 0) === 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => changeQuantity(product.id, 1)}
-                      >
-                        ADD
-                      </button>
-                    ) : (
-                      <div className="quantity-control">
-                        <button
-                          type="button"
-                          aria-label={`Remove one ${product.name}`}
-                          onClick={() => changeQuantity(product.id, -1)}
-                        >
-                          <MinusIcon />
-                        </button>
-                        <strong>{cart[product.id]}</strong>
-                        <button
-                          type="button"
-                          aria-label={`Add one ${product.name}`}
-                          onClick={() => changeQuantity(product.id, 1)}
-                        >
-                          <PlusIcon />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          {visibleProducts.length === 0 && (
-            <div className="empty-state">
-              <SearchIcon />
-              <h3>No matching items found</h3>
-              <p>Try a product, dish or store name.</p>
-            </div>
-          )}
-        </section>
-
-        <section className="promise-section">
-          <div className="content-width promise-grid">
-            <article>
-              <span>01</span>
-              <h3>Local selection</h3>
-              <p>Restaurants and grocery partners managed from private panels.</p>
-            </article>
-            <article>
-              <span>02</span>
-              <h3>Clear tracking</h3>
-              <p>Customers see every step from acceptance to delivery.</p>
-            </article>
-            <article>
-              <span>03</span>
-              <h3>Built to scale</h3>
-              <p>Food and grocery operations remain separate but work together.</p>
-            </article>
-          </div>
-        </section>
+        <section className="support-strip content-container"><div><ShieldCheck /><span><strong>Help when you need it</strong><small>Order support, cancellations and payment questions in one place.</small></span></div><Link href="/support">Customer support <ArrowRight /></Link></section>
       </main>
 
-      <footer>
-        <div className="content-width footer-inner">
-          <a className="brand footer-brand" href="#top">
-            <span className="brand-mark">Q</span>
-            <span>
-              <strong>QuickCart</strong>
-              <small>Food & Grocery</small>
-            </span>
-          </a>
-          <p>Professional starter platform for local quick commerce.</p>
-          <a href="/panel-login">Private panel login</a>
-        </div>
-      </footer>
+      {Boolean(cart?.itemCount) && !cartOpen && <button className="sticky-cart-summary" type="button" onClick={() => setCartOpen(true)}><span><ShoppingBag /><b>{cart?.itemCount} items</b><small>{formatMoney(cart?.subtotalPaise ?? 0)}</small></span><strong>View cart <ArrowRight /></strong></button>}
 
-      <nav className="mobile-nav" aria-label="Mobile navigation">
-        <a className="active" href="#top">
-          <HomeIcon />
-          <span>Home</span>
-        </a>
-        <a href="#categories">
-          <GridIcon />
-          <span>Categories</span>
-        </a>
-        <button type="button" onClick={() => setCartOpen(true)}>
-          <span className="cart-nav-icon">
-            <CartIcon />
-            {itemCount > 0 && <b>{itemCount}</b>}
-          </span>
-          <span>Cart</span>
-        </button>
-        <a href="#orders">
-          <PackageIcon />
-          <span>Orders</span>
-        </a>
-        <a href="/panel-login">
-          <UserIcon />
-          <span>Account</span>
-        </a>
+      <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+        <Link className="active" href="/"><Home /><span>Home</span></Link>
+        <button type="button" onClick={() => document.getElementById("categories")?.scrollIntoView({ behavior: "smooth" })}><Grid2X2 /><span>Categories</span></button>
+        <button type="button" onClick={() => void loadCart(true)}><ShoppingBag /><span>Cart</span>{Boolean(cart?.itemCount) && <b>{cart?.itemCount}</b>}</button>
+        <Link href="/orders"><ReceiptText /><span>Orders</span></Link>
+        <Link href="/profile"><UserRound /><span>Profile</span></Link>
       </nav>
 
-      {cartOpen && (
-        <div className="drawer-backdrop" onClick={() => setCartOpen(false)}>
-          <aside
-            className="cart-drawer"
-            aria-label="Shopping cart"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="drawer-header">
-              <div>
-                <span>Your cart</span>
-                <h2>{itemCount} item{itemCount === 1 ? "" : "s"}</h2>
-              </div>
-              <button type="button" onClick={() => setCartOpen(false)}>
-                ×
-              </button>
-            </div>
+      {cartOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCartOpen(false); }}>
+        <aside className="cart-drawer" role="dialog" aria-modal="true" aria-label="Shopping cart"><header><div><span>YOUR CART</span><h2>{cart?.store?.name ?? "Cart"}</h2></div><button type="button" aria-label="Close cart" onClick={() => setCartOpen(false)}><X /></button></header>
+          {!cart?.items.length ? <div className="empty-cart"><ShoppingBag /><h3>Your cart is ready for something good</h3><p>Add products from one store to begin checkout.</p><button type="button" onClick={() => setCartOpen(false)}>Continue shopping</button></div> : <>
+            <div className="cart-items">{cart.items.map((item) => <article key={item.id}><Image src={safeImage(item.product.imageUrl, "/icon.svg")} alt="" width={72} height={72} /><div><strong>{item.product.name}</strong><small>{item.variant.name}</small><b>{formatMoney(item.lineTotalPaise)}</b></div><div className="quantity-control"><button type="button" aria-label="Decrease quantity" onClick={() => void updateCartItem(item.id, item.quantity - 1)}><Minus /></button><span>{item.quantity}</span><button type="button" aria-label="Increase quantity" disabled={item.quantity >= item.variant.stock} onClick={() => void updateCartItem(item.id, item.quantity + 1)}><Plus /></button></div></article>)}</div>
+            <button className="clear-cart" type="button" onClick={() => void clearCart()}><Trash2 /> Clear cart</button>
+            <div className="cart-total"><span><small>Subtotal</small><strong>{formatMoney(cart.subtotalPaise)}</strong></span><p>Delivery charge and coupon discount are calculated at checkout.</p><Link href="/checkout">Continue to checkout <ArrowRight /></Link></div>
+          </>}
+        </aside>
+      </div>}
 
-            {cartItems.length === 0 ? (
-              <div className="drawer-empty">
-                <CartIcon />
-                <h3>Your cart is empty</h3>
-                <p>Add food or groceries to continue.</p>
-              </div>
-            ) : (
-              <>
-                <div className="drawer-items">
-                  {cartItems.map(({ product, quantity }) => (
-                    <article key={product.id}>
-                      <Image
-                        src={product.image}
-                        alt=""
-                        width={70}
-                        height={70}
-                      />
-                      <div>
-                        <strong>{product.name}</strong>
-                        <span>{product.unit}</span>
-                        <b>₹{product.price * quantity}</b>
-                      </div>
-                      <div className="quantity-control compact">
-                        <button
-                          type="button"
-                          onClick={() => changeQuantity(product.id, -1)}
-                        >
-                          <MinusIcon />
-                        </button>
-                        <strong>{quantity}</strong>
-                        <button
-                          type="button"
-                          onClick={() => changeQuantity(product.id, 1)}
-                        >
-                          <PlusIcon />
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-
-                <div className="bill-card">
-                  <div><span>Subtotal</span><strong>₹{subtotal}</strong></div>
-                  <div><span>Delivery fee</span><strong>₹20</strong></div>
-                  <div className="bill-total">
-                    <span>Total</span><strong>₹{subtotal + 20}</strong>
-                  </div>
-                </div>
-
-                <button className="checkout-button" type="button">
-                  Continue to checkout
-                  <span>₹{subtotal + 20}</span>
-                </button>
-              </>
-            )}
-          </aside>
-        </div>
-      )}
+      {locationOpen && <div className="modal-backdrop"><div className="location-modal" role="dialog" aria-modal="true" aria-labelledby="location-title"><button className="modal-close" type="button" aria-label="Close" onClick={() => setLocationOpen(false)}><X /></button><MapPin /><span>DELIVERY LOCATION</span><h2 id="location-title">Check your pincode</h2><p>We will show accurate delivery charges and availability at checkout.</p><form onSubmit={checkPincode}><label htmlFor="pincode">Six-digit pincode</label><input id="pincode" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={pincode} onChange={(event) => setPincode(event.target.value.replace(/\D/g, ""))} required /><button type="submit">Check availability</button></form></div></div>}
+      {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   );
 }

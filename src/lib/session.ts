@@ -1,10 +1,11 @@
 import "server-only";
 
 import { SignJWT, jwtVerify } from "jose";
-import type { PanelRole, SessionPayload } from "@/lib/types";
+import type { SessionPayload, UserRoleValue } from "@/lib/types";
 
-const COOKIE_NAME = "quickcart_panel_session";
-const SESSION_DURATION_SECONDS = 60 * 60 * 12;
+const COOKIE_NAME = "quickcart_session";
+const PANEL_SESSION_SECONDS = 60 * 60 * 12;
+const CUSTOMER_SESSION_SECONDS = 60 * 60 * 24 * 7;
 
 function getSecret(): Uint8Array {
   const value = process.env.SESSION_SECRET;
@@ -14,15 +15,23 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(value);
 }
 
-export async function createSessionToken(email: string, role: PanelRole) {
-  const expiresAt = new Date(Date.now() + SESSION_DURATION_SECONDS * 1000);
+export async function createSessionToken(user: {
+  id: string;
+  name: string;
+  email: string | null;
+  role: UserRoleValue;
+}) {
+  const duration = user.role === "CUSTOMER" ? CUSTOMER_SESSION_SECONDS : PANEL_SESSION_SECONDS;
+  const expiresAt = new Date(Date.now() + duration * 1000);
 
   const token = await new SignJWT({
-    email,
-    role,
+    name: user.name,
+    email: user.email ?? undefined,
+    role: user.role,
     expiresAt: expiresAt.toISOString()
-  } satisfies SessionPayload)
-    .setProtectedHeader({ alg: "HS256" })
+  })
+    .setSubject(user.id)
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setIssuedAt()
     .setExpirationTime(Math.floor(expiresAt.getTime() / 1000))
     .sign(getSecret());
@@ -30,27 +39,23 @@ export async function createSessionToken(email: string, role: PanelRole) {
   return { token, expiresAt };
 }
 
-export async function verifySessionToken(
-  token: string | undefined
-): Promise<SessionPayload | null> {
+export async function verifySessionToken(token: string | undefined): Promise<SessionPayload | null> {
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, getSecret(), {
-      algorithms: ["HS256"]
-    });
-
+    const { payload } = await jwtVerify(token, getSecret(), { algorithms: ["HS256"] });
     if (
-      typeof payload.email !== "string" ||
+      typeof payload.sub !== "string" ||
+      typeof payload.name !== "string" ||
       typeof payload.role !== "string" ||
       typeof payload.expiresAt !== "string"
-    ) {
-      return null;
-    }
+    ) return null;
 
     return {
-      email: payload.email,
-      role: payload.role as PanelRole,
+      userId: payload.sub,
+      name: payload.name,
+      email: typeof payload.email === "string" ? payload.email : undefined,
+      role: payload.role as UserRoleValue,
       expiresAt: payload.expiresAt
     };
   } catch {
@@ -58,7 +63,15 @@ export async function verifySessionToken(
   }
 }
 
-export const panelSessionCookie = {
+export const sessionCookie = {
   name: COOKIE_NAME,
-  durationSeconds: SESSION_DURATION_SECONDS
+  options: {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    priority: "high" as const
+  }
 };
+
+export const panelSessionCookie = sessionCookie;

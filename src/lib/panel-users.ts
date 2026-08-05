@@ -1,54 +1,17 @@
 import "server-only";
 
 import bcrypt from "bcryptjs";
+import { db } from "@/lib/db";
 import type { PanelRole } from "@/lib/types";
 
-type PanelCredential = {
-  role: PanelRole;
-  email?: string;
-  passwordHash?: string;
-};
-
-const credentials: PanelCredential[] = [
-  {
-    role: "SUPER_ADMIN",
-    email: process.env.SUPER_ADMIN_EMAIL,
-    passwordHash: process.env.SUPER_ADMIN_PASSWORD_HASH
-  },
-  {
-    role: "RESTAURANT",
-    email: process.env.RESTAURANT_EMAIL,
-    passwordHash: process.env.RESTAURANT_PASSWORD_HASH
-  },
-  {
-    role: "GROCERY",
-    email: process.env.GROCERY_EMAIL,
-    passwordHash: process.env.GROCERY_PASSWORD_HASH
-  },
-  {
-    role: "DELIVERY",
-    email: process.env.DELIVERY_EMAIL,
-    passwordHash: process.env.DELIVERY_PASSWORD_HASH
-  }
-];
-
-export async function verifyPanelCredentials(
-  email: string,
-  password: string
-): Promise<{ email: string; role: PanelRole } | null> {
+export async function verifyPanelCredentials(email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase();
-  const candidate = credentials.find(
-    (entry) => entry.email?.trim().toLowerCase() === normalizedEmail
-  );
-
-  if (!candidate?.email || !candidate.passwordHash) return null;
-  const matches = await bcrypt.compare(password, candidate.passwordHash);
+  const user = await db.user.findUnique({ where: { email: normalizedEmail } });
+  if (!user || user.role === "CUSTOMER" || !user.isActive) return null;
+  const matches = await bcrypt.compare(password, user.passwordHash);
   if (!matches) return null;
-
-  return {
-    email: candidate.email,
-    role: candidate.role
-  };
+  await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+  return { id: user.id, name: user.name, email: user.email, role: user.role as PanelRole };
 }
 
 export function getRolePath(role: PanelRole) {

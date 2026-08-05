@@ -3,12 +3,15 @@ services:
     name: quickcart-food-grocery
     runtime: node
     plan: free
-    buildCommand: npm install --include=dev && npm run build
+    region: singapore
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
-        value: 22.16.0
+        value: 22.18.0
+      - key: HOSTNAME
+        value: 0.0.0.0
       - key: DATABASE_URL
         fromDatabase:
           name: quickcart-postgres
@@ -35,5 +38,8 @@ services:
 databases:
   - name: quickcart-postgres
     plan: free
+    region: singapore
+    postgresMajorVersion: "17"
     databaseName: quickcart
     user: quickcart
+    ipAllowList: []
